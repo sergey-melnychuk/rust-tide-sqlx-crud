@@ -29,6 +29,7 @@ struct State {
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
+    sqlx::any::install_default_drivers();
 
     // docker run --name pg -e POSTGRES_PASSWORD=changeit -d -v ~/schema:/var/lib/postgresql/data -p 5432:5432 postgres
     // docker run -it --rm --link pg:pg postgres psql -h pg -U postgres
