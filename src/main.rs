@@ -12,13 +12,16 @@
 // https://gruberbastian.com/posts/deploy_rust/
 // https://www.lpalmieri.com/posts/2020-07-04-choosing-a-rust-web-framework-2020-edition/
 
-use tide::{Request, Response, Body};
-use serde::{Serialize, Deserialize};
-use sqlx::{Any, Pool};
+use serde::{Deserialize, Serialize};
 use sqlx::any::AnyPoolOptions;
+use sqlx::{Any, Pool};
+use tide::{Body, Request, Response};
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
-struct User { name: String, email: String }
+struct User {
+    name: String,
+    email: String,
+}
 
 #[derive(Clone)]
 struct State {
@@ -27,7 +30,7 @@ struct State {
 
 // docker run -p 8080:8080 --link pg:pg --name crud -d rust-tide-sqlx-crud
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     sqlx::any::install_default_drivers();
 
@@ -78,32 +81,34 @@ async fn main() -> Result<(), std::io::Error> {
     });
 
     // Update
-    app.at("/users/:name").put(|mut req: Request<State>| async move {
-        let name = req.param("name")?.to_owned();
-        let email = req.body_string().await?;
+    app.at("/users/:name")
+        .put(|mut req: Request<State>| async move {
+            let name = req.param("name")?.to_owned();
+            let email = req.body_string().await?;
 
-        let pool = req.state().pool.clone();
-        sqlx::query("UPDATE users SET email = $2 WHERE name = $1")
-            .bind(name)
-            .bind(email)
-            .execute(&pool)
-            .await?;
+            let pool = req.state().pool.clone();
+            sqlx::query("UPDATE users SET email = $2 WHERE name = $1")
+                .bind(name)
+                .bind(email)
+                .execute(&pool)
+                .await?;
 
-        Ok(Response::new(204))
-    });
+            Ok(Response::new(204))
+        });
 
     // Delete
-    app.at("/users/:name").delete(|req: Request<State>| async move {
-        let name = req.param("name")?.to_owned();
+    app.at("/users/:name")
+        .delete(|req: Request<State>| async move {
+            let name = req.param("name")?.to_owned();
 
-        let pool = req.state().pool.clone();
-        sqlx::query("DELETE FROM users WHERE name = $1")
-            .bind(name)
-            .execute(&pool)
-            .await?;
+            let pool = req.state().pool.clone();
+            sqlx::query("DELETE FROM users WHERE name = $1")
+                .bind(name)
+                .execute(&pool)
+                .await?;
 
-        Ok(Response::new(204))
-    });
+            Ok(Response::new(204))
+        });
 
     app.listen("0.0.0.0:8080").await?;
     Ok(())
